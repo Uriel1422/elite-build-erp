@@ -306,7 +306,7 @@ export default function BIMViewer() {
             </button>
             <div className="w-[1px] h-8 bg-titanium-800 self-center mx-1"></div>
             <div className="px-2 flex items-center text-[10px] font-medium text-titanium-500">
-              Usa Clic Izquierdo para rotar, Rueda para Zoom, Clic Derecho para paneo.
+              Usa Clic Izquierdo para rotar, Rueda para Zoom, Clic Derecho para paneo. KLK ELIAM
             </div>
           </div>
         </div>
