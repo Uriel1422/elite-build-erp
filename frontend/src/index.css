@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-carbon-900 text-smoke font-sans overflow-x-hidden selection:bg-neon/30 selection:text-white;
+  }
+}
+
+/* Glassmorphism utility classes */
+.glass-panel {
+  background: rgba(15, 21, 36, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-glow {
+  background: rgba(21, 29, 48, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.glass-input {
+  background: rgba(6, 9, 17, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  @apply rounded-xl text-smoke placeholder-titanium-500 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon/30 transition-all duration-300;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(6, 9, 17, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.4);
+}
+
+/* Leaflet map custom override to fit dark mode */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+  background: #0B0F19 !important;
+}
+.leaflet-tile {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(15, 21, 36, 0.8) !important;
+}
+.leaflet-bar a {
+  background: transparent !important;
+  color: #F8FAFC !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.leaflet-bar a:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Animating Neon Glows */
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8)); }
+}
+
+.neon-pulse {
+  animation: neonPulse 3s infinite;
+}
