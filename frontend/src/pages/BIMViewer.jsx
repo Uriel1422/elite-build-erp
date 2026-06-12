@@ -296,7 +296,7 @@ export default function BIMViewer() {
               <span className="text-[10px] font-bold text-smoke tracking-wider uppercase">Motor R3F Activo</span>
             </div>
             <div className="px-3 py-1.5 rounded-lg bg-carbon-950/80 border border-titanium-800 backdrop-blur-md flex items-center gap-2">
-              <span className="text-[10px] font-bold text-titanium-400">FPS: 60</span>
+              <span className="text-[10px] font-bold text-titanium-400">FPS: 70</span>
             </div>
           </div>
 
