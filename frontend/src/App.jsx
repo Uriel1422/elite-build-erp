@@ -17,6 +17,7 @@ import AIAssistant from './pages/AIAssistant';
 import ExecutiveReports from './pages/ExecutiveReports';
 import GISMap from './pages/GISMap';
 import Config from './pages/Config';
+import Standards from './pages/Standards';
 
 export default function App() {
   const { isAuthenticated, currentPage } = useEliteStore();
@@ -52,6 +53,8 @@ export default function App() {
         return <GISMap />;
       case 'config':
         return <Config />;
+      case 'standards':
+        return <Standards />;
       default:
         return <Dashboard />;
     }

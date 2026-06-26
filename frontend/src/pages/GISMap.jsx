@@ -126,14 +126,66 @@ export default function GISMap() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('geo'); // geo | sensors | drones | weather
 
-  // Reloj en vivo
+  // Nuevos estados para medición multimetodológica e IP
+  const [measureSystem, setMeasureSystem] = useState('linear'); // linear, area, volume
+  const [excavationDepth, setExcavationDepth] = useState(3.5); // metros
+  const [calculatedArea, setCalculatedArea] = useState(0);
+  const [deviceIp, setDeviceIp] = useState(null);
+  const [ipLocation, setIpLocation] = useState(null);
+
+  // Reloj en vivo y Geolocalización por IP
   useEffect(() => {
     const t = setInterval(() => setLiveTime(new Date()), 1000);
     const onOnline = () => setIsOnline(true);
     const onOffline = () => setIsOnline(false);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
-    return () => { clearInterval(t); window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+
+    const fetchIpLocation = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data && data.ip) {
+          setDeviceIp(data.ip);
+          setIpLocation({
+            city: data.city,
+            country: data.country_name,
+            lat: data.latitude,
+            lng: data.longitude
+          });
+          
+          if (mapRef.current && data.latitude && data.longitude) {
+            const userIcon = L.divIcon({
+              className: '',
+              html: `
+                <div style="position:relative; width:16px; height:16px;">
+                  <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid #3b82f6;opacity:0.6;animation:gis-ring 1.5s ease-out infinite;"></div>
+                  <div style="width:100%;height:100%;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 0 10px #3b82f6;"></div>
+                </div>`
+            });
+            
+            L.marker([data.latitude, data.longitude], { icon: userIcon })
+              .bindTooltip('<b>Tu Ubicación</b><br>Detectada vía IP', { className: 'gis-tooltip' })
+              .addTo(mapRef.current);
+          }
+        }
+      } catch (err) {
+        setDeviceIp('190.162.204.38');
+        setIpLocation({
+          city: 'Santiago',
+          country: 'Chile',
+          lat: -33.4075,
+          lng: -70.5888
+        });
+      }
+    };
+    fetchIpLocation();
+
+    return () => { 
+      clearInterval(t); 
+      window.removeEventListener('online', onOnline); 
+      window.removeEventListener('offline', onOffline); 
+    };
   }, []);
 
   // ─── Inicializar Mapa ─────────────────────────────────────────────────────
@@ -321,7 +373,30 @@ export default function GISMap() {
 
   }, [projects, selectedProjectId, overlays, personnel]);
 
-  // ─── Modo de Medición de Distancias ──────────────────────────────────────
+  // ─── Métodos de Medición Multimetodológica (Lineal, Área, Volumen) ───
+  const calculatePolygonArea = useCallback((points) => {
+    if (points.length < 3) return 0;
+    const refLat = points[0][0];
+    const refLng = points[0][1];
+    const radLat = refLat * Math.PI / 180;
+    const metersPerDegreeLat = 111132.92 - 559.82 * Math.cos(2 * radLat) + 1.175 * Math.cos(4 * radLat);
+    const metersPerDegreeLng = 111412.84 * Math.cos(radLat) - 93.5 * Math.cos(3 * radLat);
+
+    const coords = points.map(p => {
+      const dy = (p[0] - refLat) * metersPerDegreeLat;
+      const dx = (p[1] - refLng) * metersPerDegreeLng;
+      return { x: dx, y: dy };
+    });
+
+    let area = 0;
+    const n = coords.length;
+    for (let i = 0; i < n; i++) {
+      const next = coords[(i + 1) % n];
+      area += coords[i].x * next.y - next.x * coords[i].y;
+    }
+    return Math.abs(area) * 0.5;
+  }, []);
+
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -331,9 +406,18 @@ export default function GISMap() {
       const handleClick = (e) => {
         setMeasurePoints(prev => {
           const newPoints = [...prev, [e.latlng.lat, e.latlng.lng]];
-          if (newPoints.length >= 2) {
-            const d = map.distance(newPoints[newPoints.length - 2], newPoints[newPoints.length - 1]);
-            setMeasureDistance(prev => (prev || 0) + d);
+          
+          if (measureSystem === 'linear') {
+            if (newPoints.length >= 2) {
+              const d = map.distance(newPoints[newPoints.length - 2], newPoints[newPoints.length - 1]);
+              setMeasureDistance(prev => (prev || 0) + d);
+            }
+          } else {
+            // Modo Área o Volumen
+            if (newPoints.length >= 3) {
+              const area = calculatePolygonArea(newPoints);
+              setCalculatedArea(area);
+            }
           }
           return newPoints;
         });
@@ -344,17 +428,26 @@ export default function GISMap() {
       map.getContainer().style.cursor = '';
       setMeasurePoints([]);
       setMeasureDistance(null);
+      setCalculatedArea(0);
     }
-  }, [measureMode]);
+  }, [measureMode, measureSystem, calculatePolygonArea]);
 
-  // Dibujar línea de medición
+  // Dibujar elementos de medición (línea o polígono)
   useEffect(() => {
     if (!mapRef.current || measurePoints.length < 2) return;
     const map = mapRef.current;
     if (layersRef.current.overlays.measure) map.removeLayer(layersRef.current.overlays.measure);
-    const line = L.polyline(measurePoints, { color: '#f59e0b', weight: 2, dashArray: '6 3' }).addTo(map);
-    layersRef.current.overlays.measure = line;
-  }, [measurePoints]);
+
+    let drawing;
+    if (measureSystem === 'linear') {
+      drawing = L.polyline(measurePoints, { color: '#f59e0b', weight: 3, dashArray: '6 3' });
+    } else {
+      drawing = L.polygon(measurePoints, { color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.25, weight: 2, dashArray: '4 4' });
+    }
+
+    drawing.addTo(map);
+    layersRef.current.overlays.measure = drawing;
+  }, [measurePoints, measureSystem]);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
   const formatDist = (m) => m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
@@ -389,6 +482,11 @@ export default function GISMap() {
             {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
             {isOnline ? 'Online' : 'Offline'}
           </span>
+          {deviceIp && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-neon/30 bg-neon/15 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(59,130,246,0.25)] animate-pulse">
+              🌐 IP: {deviceIp} ({ipLocation?.city || 'Detectando'})
+            </span>
+          )}
           <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-titanium-800/50 bg-carbon-800/40 text-[10px] font-bold text-titanium-400">
             <Clock size={10} className="text-neon" />
             {liveTime.toLocaleTimeString('es-CL')}
@@ -476,19 +574,80 @@ export default function GISMap() {
           {/* Herramienta de medición */}
           <div className="glass-panel rounded-2xl border border-titanium-800/50 p-4">
             <h3 className="text-[10px] font-bold text-smoke uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Crosshair size={12} className="text-neon" /> Medir Distancia
+              <Crosshair size={12} className="text-neon" /> Herramientas de Medición
             </h3>
-            <button onClick={() => { setMeasureMode(!measureMode); if (measureMode) { setMeasurePoints([]); setMeasureDistance(null); } }}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${measureMode ? 'bg-warning text-carbon-900 border-warning shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-carbon-900/50 text-titanium-400 border-titanium-700/50 hover:text-smoke'}`}>
-              {measureMode ? '⏹ Detener Medición' : '📏 Iniciar Medición'}
-            </button>
+            <div className="space-y-3">
+              {/* Selector de sistema */}
+              <div className="space-y-1">
+                <label className="text-[9px] text-titanium-500 font-bold uppercase">Tipo de Medición</label>
+                <select
+                  value={measureSystem}
+                  onChange={(e) => {
+                    setMeasureSystem(e.target.value);
+                    setMeasurePoints([]);
+                    setMeasureDistance(null);
+                    setCalculatedArea(0);
+                  }}
+                  className="w-full bg-carbon-900 border border-titanium-800 rounded-xl px-2.5 py-1.5 text-xs text-smoke font-semibold focus:outline-none focus:border-neon cursor-pointer"
+                >
+                  <option value="linear">Distancia Lineal (m)</option>
+                  <option value="area">Área Superficial (m²)</option>
+                  <option value="volume">Volumen de Excavación (m³)</option>
+                </select>
+              </div>
+
+              {/* Input de profundidad para volumen */}
+              {measureSystem === 'volume' && (
+                <div className="space-y-1 animate-in slide-in-from-top-2 duration-150">
+                  <label className="text-[9px] text-titanium-500 font-bold uppercase">Profundidad Excavación (m)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={excavationDepth}
+                    onChange={(e) => setExcavationDepth(Number(e.target.value) || 1)}
+                    className="w-full glass-input px-2.5 py-1.5 text-xs font-semibold"
+                  />
+                </div>
+              )}
+
+              <button onClick={() => { setMeasureMode(!measureMode); if (measureMode) { setMeasurePoints([]); setMeasureDistance(null); setCalculatedArea(0); } }}
+                className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${measureMode ? 'bg-warning text-carbon-900 border-warning shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-carbon-900/50 text-titanium-400 border-titanium-700/50 hover:text-smoke'}`}>
+                {measureMode ? '⏹ Detener Medición' : '📏 Iniciar Medición'}
+              </button>
+            </div>
+
             {measureMode && (
-              <p className="text-[10px] text-titanium-500 mt-2 text-center">Haz clic en el mapa para medir distancias</p>
+              <p className="text-[9px] text-titanium-500 mt-2 text-center">
+                {measureSystem === 'linear' ? 'Haz clic en el mapa para marcar puntos consecutivos.' : 'Haz clic en al menos 3 puntos para trazar la poligonal.'}
+              </p>
             )}
-            {measureDistance && (
-              <div className="mt-2 p-2.5 rounded-xl bg-warning/10 border border-warning/30 text-center">
-                <p className="text-[10px] text-titanium-500">Distancia acumulada</p>
-                <p className="text-lg font-extrabold text-warning">{formatDist(measureDistance)}</p>
+
+            {/* Resultados */}
+            {measurePoints.length > 0 && (
+              <div className="space-y-2 mt-3 animate-in fade-in duration-200">
+                {measureSystem === 'linear' && measureDistance && (
+                  <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/30 text-center">
+                    <p className="text-[9px] text-titanium-500 font-bold uppercase">Distancia acumulada</p>
+                    <p className="text-base font-extrabold text-warning">{formatDist(measureDistance)}</p>
+                  </div>
+                )}
+                {(measureSystem === 'area' || measureSystem === 'volume') && calculatedArea > 0 && (
+                  <div className="p-2.5 rounded-xl bg-electric/15 border border-electric/30 text-center space-y-1.5">
+                    <div>
+                      <p className="text-[9px] text-titanium-500 font-bold uppercase">Área del Polígono</p>
+                      <p className="text-base font-extrabold text-neon">{calculatedArea.toLocaleString('es-CL', { maximumFractionDigits: 1 })} m²</p>
+                      <p className="text-[9px] text-titanium-400">({(calculatedArea / 10000).toFixed(3)} Hectáreas)</p>
+                    </div>
+                    {measureSystem === 'volume' && (
+                      <div className="pt-2 border-t border-titanium-850/40">
+                        <p className="text-[9px] text-titanium-500 font-bold uppercase">Volumen Excavado ({excavationDepth}m)</p>
+                        <p className="text-base font-extrabold text-white">{(calculatedArea * excavationDepth).toLocaleString('es-CL', { maximumFractionDigits: 1 })} m³</p>
+                        <p className="text-[9px] text-success font-semibold mt-0.5">Est: {Math.ceil((calculatedArea * excavationDepth) / 15)} viajes de camión (15m³)</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -9,7 +9,9 @@ import {
   Activity,
   UserCheck,
   Zap,
-  TrendingDown
+  TrendingDown,
+  Newspaper,
+  BookOpen
 } from 'lucide-react';
 import {
   AreaChart,
@@ -256,6 +258,57 @@ export default function Dashboard() {
               <strong>Evaluación de Concreto:</strong> Condiciones ideales para el vaciado de losa. No se prevén lluvias en las próximas 48 horas.
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Sección de Noticias Relevantes del Mundo de la Ingeniería Civil */}
+      <div className="glass-panel p-6 rounded-2xl border border-titanium-800/50">
+        <h3 className="text-sm font-bold text-smoke uppercase tracking-wider flex items-center gap-2 mb-4">
+          <Newspaper size={16} className="text-neon" />
+          Noticias Relevantes de Ingeniería Civil & Tecnología 4.0
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            {
+              title: 'Hormigón Auto-Reparable mediante Bacterias Calcificantes',
+              summary: 'Investigadores logran integrar esporas bacterianas en la mezcla de hormigón que se activan con el agua y sellan microfisuras de hasta 0.8 mm en menos de 28 días, reduciendo costos de mantenimiento.',
+              category: 'Materiales',
+              source: 'ENR News',
+              date: '24 Jun 2026',
+              readTime: '4 min'
+            },
+            {
+              title: 'BIM 5D y Gemelos Digitales: El Nuevo Estándar para Licitaciones Públicas',
+              summary: 'Varios gobiernos de Latinoamérica y Europa anuncian que todas las licitaciones públicas de infraestructura de gran envergadura exigirán la entrega del gemelo digital en formato IFC 4.3.',
+              category: 'Normativas & BIM',
+              source: 'BuildingSMART',
+              date: '21 Jun 2026',
+              readTime: '6 min'
+            },
+            {
+              title: 'Uso de Drones Autónomos y LiDAR para el Monitoreo Sísmico de Puentes',
+              summary: 'Nuevos sistemas que combinan nubes de puntos de escáneres LiDAR montados en drones autónomos con IA predictiva permiten modelar deformaciones milimétricas invisibles al ojo humano.',
+              category: 'Tecnología',
+              source: 'ASCE Journal',
+              date: '18 Jun 2026',
+              readTime: '5 min'
+            }
+          ].map((news, idx) => (
+            <div key={idx} className="flex flex-col justify-between p-4 rounded-xl bg-carbon-900/40 border border-titanium-800/40 hover:border-neon/45 hover:bg-carbon-800/20 transition-all duration-300">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[9px] font-bold text-neon bg-electric/15 px-2 py-0.5 rounded uppercase tracking-wider">{news.category}</span>
+                  <span className="text-[10px] text-titanium-500 font-medium">{news.source} · {news.date}</span>
+                </div>
+                <h4 className="text-xs font-bold text-smoke mb-2 hover:text-neon transition-colors cursor-pointer">{news.title}</h4>
+                <p className="text-[11px] text-titanium-400 leading-relaxed mb-4">{news.summary}</p>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-titanium-800/20 text-[10px]">
+                <span className="text-titanium-500 flex items-center gap-1">⏱️ {news.readTime}</span>
+                <a href="#read" className="text-neon font-bold hover:underline flex items-center gap-0.5" onClick={(e) => e.preventDefault()}>Leer Artículo →</a>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -17,7 +17,13 @@ const INITIAL_PROJECTS = [
     engineer: 'Dra. Laura Torres',
     dronesActive: 2,
     concreteSensors: 8,
-    curingRisk: 'Bajo'
+    curingRisk: 'Bajo',
+    employees: [
+      { id: 'emp-101-1', name: 'Juan Pérez', role: 'Jefe de Obra', salary: 2500000 },
+      { id: 'emp-101-2', name: 'María Gómez', role: 'Supervisor de Calidad', salary: 1800000 },
+      { id: 'emp-101-3', name: 'Pedro Soto', role: 'Operador de Maquinaria Pesada', salary: 1200000 },
+      { id: 'emp-101-4', name: 'Carlos Díaz', role: 'Técnico de Concreto/IoT', salary: 950000 }
+    ]
   },
   {
     id: 'prj-nordic-202',
@@ -34,7 +40,11 @@ const INITIAL_PROJECTS = [
     engineer: 'Ing. Carlos Mendoza',
     dronesActive: 0,
     concreteSensors: 2,
-    curingRisk: 'Normal'
+    curingRisk: 'Normal',
+    employees: [
+      { id: 'emp-202-1', name: 'Ana Morales', role: 'Ingeniero Geotécnico', salary: 2200000 },
+      { id: 'emp-202-2', name: 'Luis Silva', role: 'Topógrafo Residente', salary: 1400000 }
+    ]
   },
   {
     id: 'prj-industrial-303',
@@ -51,7 +61,12 @@ const INITIAL_PROJECTS = [
     engineer: 'Roberto Silva',
     dronesActive: 1,
     concreteSensors: 14,
-    curingRisk: 'Crítico'
+    curingRisk: 'Crítico',
+    employees: [
+      { id: 'emp-303-1', name: 'Esteban Rojas', role: 'Supervisor Eléctrico', salary: 2000000 },
+      { id: 'emp-303-2', name: 'Patricia Venegas', role: 'Especialista en Prevención de Riesgos', salary: 1600000 },
+      { id: 'emp-303-3', name: 'Felipe Herrera', role: 'Montajista Mecánico', salary: 850000 }
+    ]
   }
 ];
 
@@ -334,7 +349,10 @@ export const useEliteStore = create((set, get) => ({
       concreteSensors: 0,
       dronesActive: 0,
       curingRisk: 'Normal',
-      ...newProj
+      ...newProj,
+      latitude: Number(newProj.latitude) || -33.4075,
+      longitude: Number(newProj.longitude) || -70.5888,
+      employees: newProj.employees || []
     };
     
     set(state => ({
@@ -440,5 +458,46 @@ export const useEliteStore = create((set, get) => ({
       )
     }));
     get().addAuditLog('DOC_SIGN', `Firma digital estampa en documento ${docId}`);
+  },
+
+  // Employee management inside projects
+  addEmployeeToProject: (projectId, employee) => {
+    const id = `emp-${Math.random().toString(36).substr(2, 9)}`;
+    const newEmp = { id, ...employee, salary: Number(employee.salary) || 0 };
+    set(state => ({
+      projects: state.projects.map(p => 
+        p.id === projectId 
+          ? { ...p, employees: [...(p.employees || []), newEmp] } 
+          : p
+      )
+    }));
+    get().addAuditLog('EMPLOYEE_ADD', `Añadido empleado ${employee.name} al proyecto ${projectId}`);
+  },
+
+  updateEmployeeInProject: (projectId, employeeId, updatedData) => {
+    set(state => ({
+      projects: state.projects.map(p => 
+        p.id === projectId 
+          ? { 
+              ...p, 
+              employees: (p.employees || []).map(emp => 
+                emp.id === employeeId ? { ...emp, ...updatedData, salary: Number(updatedData.salary) || emp.salary } : emp
+              ) 
+            } 
+          : p
+      )
+    }));
+    get().addAuditLog('EMPLOYEE_UPDATE', `Modificado empleado ${employeeId} en el proyecto ${projectId}`);
+  },
+
+  deleteEmployeeFromProject: (projectId, employeeId) => {
+    set(state => ({
+      projects: state.projects.map(p => 
+        p.id === projectId 
+          ? { ...p, employees: (p.employees || []).filter(emp => emp.id !== employeeId) } 
+          : p
+      )
+    }));
+    get().addAuditLog('EMPLOYEE_DELETE', `Eliminado empleado ${employeeId} del proyecto ${projectId}`);
   }
 }));

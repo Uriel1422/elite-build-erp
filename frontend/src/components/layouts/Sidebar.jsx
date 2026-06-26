@@ -15,7 +15,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -34,6 +35,7 @@ export default function Sidebar() {
     { id: 'ai', name: 'Ingeniería Predictiva IA', icon: Cpu, role: ['Super Admin', 'Ingeniero Civil', 'Arquitecto'] },
     { id: 'reports', name: 'Reportes Ejecutivos', icon: BarChart3, role: ['Super Admin', 'Ingeniero Civil', 'Cliente', 'Auditor'] },
     { id: 'map', name: 'GIS & Topografía', icon: Map, role: ['Super Admin', 'Ingeniero Civil', 'Arquitecto', 'Supervisor'] },
+    { id: 'standards', name: 'Buscador de Normas', icon: BookOpen, role: ['Super Admin', 'Ingeniero Civil', 'Arquitecto', 'Supervisor', 'Contratista', 'Cliente', 'Auditor'] },
   ];
 
   // Filter items based on user role (RBAC)
